@@ -183,8 +183,8 @@ src/
 
 Орб создавался с помощью двух отдельных редакторов — они тоже open source:
 
-- [**liquid-orb-editor**](http://192.168.1.130:3000/androman/liquid-orb-editor) — тонкая настройка жидкости (волны, гравитация, вязкость, сплэши)
-- [**fire-particle-editor**](http://192.168.1.130:3000/androman/fire-particle-editor) — ручная лепка пламени (искры, дым, конус, трейлы)
+- [**liquid-orb-editor**](https://github.com/andromanpro/liquid-orb-editor) — тонкая настройка жидкости (волны, гравитация, вязкость, сплэши)
+- [**fire-particle-editor**](https://github.com/andromanpro/fire-particle-editor) — ручная лепка пламени (искры, дым, конус, трейлы)
 
 ---
 
