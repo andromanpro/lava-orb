@@ -186,10 +186,6 @@ src/
 - [**liquid-orb-editor**](http://192.168.1.130:3000/androman/liquid-orb-editor) — тонкая настройка жидкости (волны, гравитация, вязкость, сплэши)
 - [**fire-particle-editor**](http://192.168.1.130:3000/androman/fire-particle-editor) — ручная лепка пламени (искры, дым, конус, трейлы)
 
-А также прародитель — экспериментальный playground со всеми версиями v1-v4:
-
-- [**lava-orb-playground**](http://192.168.1.130:3000/androman/lava-orb-playground) — WebGL2 liquid, альтернативные рендереры, коллекция готовых background-scenes
-
 ---
 
 ## Лицензия
