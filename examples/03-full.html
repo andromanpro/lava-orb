@@ -1,0 +1,1701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lava Orb — Temperature Slider Effect</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f4f5f8;
+      --card-bg: #ffffff;
+      --text: #1a1a2e;
+      --text-muted: #666;
+      --track-bg: #E2E5EA;
+      --border: #e0e0e0;
+      --accent: #4a9eff;
+    }
+
+    body[data-theme="dark"] {
+      --bg: #0d1117;
+      --card-bg: #161b22;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --track-bg: #2a2a4a;
+      --border: #30363d;
+      --accent: #58a6ff;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+    }
+    .header h1 { font-size: 20px; font-weight: 600; }
+    .header-actions { display: flex; gap: 8px; }
+    .header-actions button {
+      width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border);
+      background: var(--card-bg); cursor: pointer; font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s;
+    }
+    .header-actions button:hover { background: var(--bg); }
+
+    .container {
+      max-width: 900px;
+      margin: 32px auto;
+      padding: 0 24px;
+    }
+
+    .description {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .slider-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: visible;
+    }
+
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .slider-label span { font-size: 14px; font-weight: 500; }
+
+    .value-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      color: #fff;
+      font-weight: 700;
+      font-size: 14px;
+      transition: background 0.3s, box-shadow 0.3s;
+      box-shadow: 0 2px 8px var(--badge-glow, transparent);
+    }
+
+    .slider-row {
+      position: relative;
+      display: flex;
+      align-items: center;
+      overflow: visible;
+    }
+    .slider-track-bar {
+      position: absolute;
+      left: 0; right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 12px;
+      border-radius: 6px;
+      background: var(--track-bg);
+      z-index: 1;
+      pointer-events: none;
+    }
+    .slider-track-fill {
+      height: 100%;
+      border-radius: 6px;
+      transition: box-shadow 0.3s; /* было width 0.1s — заливка догоняла орб с задержкой */
+    }
+    .slider-track-bar.track-fire .slider-track-fill {
+      box-shadow: 0 0 12px 3px rgba(255,80,0,0.5), 0 0 30px 6px rgba(255,50,0,0.2);
+    }
+    .slider-track-bar.track-fire-intense .slider-track-fill {
+      box-shadow: 0 0 16px 5px rgba(255,60,0,0.7), 0 0 40px 10px rgba(255,30,0,0.3);
+    }
+    .slider-track-bar.track-frost .slider-track-fill {
+      box-shadow: 0 0 12px 3px rgba(80,150,255,0.5), 0 0 30px 6px rgba(50,120,255,0.2);
+    }
+    .slider-track-bar.track-frost-intense .slider-track-fill {
+      box-shadow: 0 0 16px 5px rgba(60,130,255,0.7), 0 0 40px 10px rgba(30,100,255,0.3);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      outline: none;
+      cursor: pointer;
+      background: transparent;
+      padding: calc(var(--orb-size, 60px) / 2 - 4px) 0;
+      position: relative;
+      z-index: 6;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: var(--orb-size, 60px); height: var(--orb-size, 60px);
+      border-radius: 50%;
+      background: transparent;
+      border: none;
+      cursor: grab;
+      position: relative;
+      z-index: 2;
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: var(--orb-size, 60px); height: var(--orb-size, 60px);
+      border-radius: 50%;
+      background: transparent;
+      border: none;
+      cursor: grab;
+    }
+    input[type="range"]::-webkit-slider-thumb:active { cursor: grabbing; }
+    input[type="range"]::-moz-range-thumb:active { cursor: grabbing; }
+
+    body.effects-none input[type="range"]::-webkit-slider-thumb {
+      width: 28px; height: 28px;
+      background: var(--accent);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    body.effects-none input[type="range"]::-moz-range-thumb {
+      width: 28px; height: 28px;
+      background: var(--accent);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+    .slider-orb-track {
+      position: absolute;
+      left: 0; right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      height: var(--orb-size, 60px);
+      pointer-events: none;
+      z-index: 3;
+      overflow: visible;
+    }
+
+    .slider-orb {
+      position: absolute;
+      width: var(--orb-size, 60px); height: var(--orb-size, 60px);
+      border-radius: 50%;
+      transform: translateX(-50%);
+      pointer-events: none;
+      box-shadow: 0 0 12px 2px var(--orb-glow, rgba(100,100,255,0.3));
+      transition: box-shadow 0.3s;
+      overflow: visible;
+    }
+    .slider-orb.dragging {
+      box-shadow: 0 0 24px 6px var(--orb-glow, rgba(100,100,255,0.5));
+    }
+    .slider-orb canvas.orb-canvas {
+      display: block;
+      border-radius: 50%;
+    }
+
+    /* Fire aura canvas */
+    canvas.fire-canvas {
+      position: absolute;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+    .slider-orb canvas.fire-canvas {
+      position: absolute;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+
+    body.effects-none .slider-orb-track { display: none; }
+
+    /* Showcase */
+    .showcase {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+      margin-bottom: 24px;
+      text-align: center;
+      overflow: visible;
+    }
+    .showcase h2 { font-size: 16px; margin-bottom: 16px; font-weight: 500; }
+    .showcase-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 48px;
+      justify-content: center;
+      padding: 40px 0;
+    }
+    .showcase-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+    }
+    .showcase-item .orb-wrapper {
+      position: relative;
+      width: 80px; height: 80px;
+      overflow: visible;
+    }
+    .showcase-item .orb-wrapper canvas.orb-canvas {
+      display: block;
+      border-radius: 50%;
+      position: relative;
+      z-index: 2;
+    }
+    .showcase-item .orb-wrapper canvas.fire-canvas {
+      position: absolute;
+      pointer-events: none;
+      z-index: 1;
+      mix-blend-mode: screen;
+    }
+    .showcase-item .orb-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 600;
+      position: relative;
+      z-index: 3;
+    }
+
+    .controls-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+    .controls-panel h2 { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+    .controls-panel h3 { font-size: 12px; font-weight: 600; margin: 14px 0 8px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 10px; }
+    .controls-panel h3:first-of-type { margin-top: 0; border-top: none; padding-top: 0; }
+    .controls-panel h3[style*="cursor"] { cursor: pointer; }
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 24px;
+    }
+    .ctrl-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .ctrl-row label { font-size: 13px; font-weight: 500; white-space: nowrap; min-width: 90px; }
+    .ctrl-row input[type="range"] {
+      flex: 1; padding: 6px 0; height: 8px;
+      background: var(--track-bg);
+      background-clip: content-box;
+      border-radius: 4px;
+    }
+    .ctrl-row input[type="range"]::-webkit-slider-thumb {
+      width: 16px; height: 16px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+    .ctrl-row input[type="range"]::-moz-range-thumb {
+      width: 16px; height: 16px;
+      background: var(--accent);
+      border-radius: 50%;
+      border: none;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+    .ctrl-row .ctrl-val { font-size: 13px; font-weight: 600; min-width: 36px; text-align: center; color: var(--text-muted); }
+
+    /* Ambient glow on nearby elements when fire is active */
+    .slider-card.fire-active {
+      box-shadow: 0 0 60px 20px rgba(255,80,0,0.15), 0 0 120px 40px rgba(255,50,0,0.08);
+      border-color: rgba(255,100,30,0.3);
+      transition: box-shadow 0.5s, border-color 0.5s;
+    }
+    .slider-card.fire-intense {
+      box-shadow: 0 0 80px 30px rgba(255,60,0,0.25), 0 0 200px 60px rgba(255,30,0,0.12);
+      border-color: rgba(255,80,20,0.5);
+    }
+
+    /* Frost ambient glow on nearby elements */
+    .slider-card.frost-active {
+      box-shadow: 0 0 60px 20px rgba(80,150,255,0.15), 0 0 120px 40px rgba(50,120,255,0.08);
+      border-color: rgba(100,170,255,0.3);
+      transition: box-shadow 0.5s, border-color 0.5s;
+    }
+    .slider-card.frost-intense {
+      box-shadow: 0 0 80px 30px rgba(60,130,255,0.25), 0 0 200px 60px rgba(30,100,255,0.12);
+      border-color: rgba(80,150,255,0.5);
+    }
+
+    .collapsed { max-height: 0 !important; overflow: hidden; transition: max-height 0.3s; }
+  </style>
+</head>
+<body>
+
+  <canvas id="bg-canvas" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;pointer-events:none;"></canvas>
+
+  <div class="header">
+    <h1>Lava Orb</h1>
+    <div class="header-actions">
+      <select id="renderer-select" title="Liquid renderer (WebGL experimental — slow due to GPU↔CPU sync per orb)" style="height:36px;border-radius:18px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);padding:0 12px;font-size:13px;cursor:pointer;outline:none;">
+        <option value="canvas2d">Canvas 2D</option>
+        <option value="webgl2">WebGL 2 (slow)</option>
+      </select>
+      <select id="bg-select" title="Page background" style="height:36px;border-radius:18px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);padding:0 12px;font-size:13px;cursor:pointer;outline:none;">
+        <option value="none">No BG</option>
+        <option value="embers">Embers</option>
+        <option value="aurora">Aurora</option>
+        <option value="grid">Synthwave</option>
+      </select>
+      <button id="effects-toggle" title="Toggle effects mode">&#128293;</button>
+      <button id="theme-toggle" title="Toggle dark/light theme">&#127769;</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="description">
+      Temperature-reactive liquid capsule effect for range sliders. Value 1 = frozen ice with crystals,
+      gradually warming through values, value 10 = intense fire with massive flames.
+      Built with Canvas 2D, zero dependencies. Try dragging the sliders!
+    </div>
+
+    <div class="showcase">
+      <h2>All 10 temperature states</h2>
+      <div class="showcase-grid" id="showcase-grid"></div>
+    </div>
+
+    <div class="controls-panel">
+      <h2>Parameters</h2>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+        <input id="preset-name" type="text" placeholder="preset name" value="my-preset"
+          style="flex:1;min-width:120px;padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:var(--card-bg);color:var(--text);">
+        <button id="btn-save-preset" style="padding:5px 12px;font-size:12px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:var(--card-bg);color:var(--text);">&#128190; Save</button>
+        <button id="btn-load-preset" style="padding:5px 12px;font-size:12px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:var(--card-bg);color:var(--text);">&#128194; Load</button>
+        <input id="preset-file-input" type="file" accept=".json" style="display:none;">
+      </div>
+      <div class="controls-grid">
+        <h3>Orb</h3>
+        <div class="ctrl-row">
+          <label>Size</label>
+          <input type="range" id="ctrl-size" min="40" max="120" value="60">
+          <span class="ctrl-val" id="ctrl-size-val">60</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Bounce</label>
+          <input type="range" id="ctrl-bounce" min="20" max="95" value="65">
+          <span class="ctrl-val" id="ctrl-bounce-val">0.65</span>
+        </div>
+        <h3 onclick="this.nextElementSibling.classList.toggle('collapsed')" style="cursor:pointer">&#9656; Liquid &amp; Effects</h3>
+        <div class="collapsed" style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;">
+        <div class="ctrl-row">
+          <label>Speed</label>
+          <input type="range" id="ctrl-speed" min="10" max="300" value="100">
+          <span class="ctrl-val" id="ctrl-speed-val">1.0x</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Intensity</label>
+          <input type="range" id="ctrl-intensity" min="10" max="200" value="100">
+          <span class="ctrl-val" id="ctrl-intensity-val">100%</span>
+        </div>
+        <div class="ctrl-row">
+          <label>FX radius</label>
+          <input type="range" id="ctrl-radius" min="20" max="100" value="60">
+          <span class="ctrl-val" id="ctrl-radius-val">60%</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Gravity</label>
+          <input type="range" id="ctrl-gravity" min="5" max="50" value="15">
+          <span class="ctrl-val" id="ctrl-gravity-val">0.15</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Particles</label>
+          <input type="range" id="ctrl-particles" min="5" max="100" value="60">
+          <span class="ctrl-val" id="ctrl-particles-val">60</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Sloshing</label>
+          <input type="range" id="ctrl-sloshing" min="10" max="200" value="100">
+          <span class="ctrl-val" id="ctrl-sloshing-val">100%</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Trail</label>
+          <input type="range" id="ctrl-trail" min="50" max="300" value="150">
+          <span class="ctrl-val" id="ctrl-trail-val">1.5x</span>
+        </div>
+        </div>
+        <h3 onclick="this.nextElementSibling.classList.toggle('collapsed')" style="cursor:pointer">&#9656; Explosion</h3>
+        <div class="collapsed" style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;">
+        <div class="ctrl-row">
+          <label>Blast power</label>
+          <input type="range" id="ctrl-blast" min="10" max="200" value="100">
+          <span class="ctrl-val" id="ctrl-blast-val">100%</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Fireball</label>
+          <input type="range" id="ctrl-fireball" min="20" max="250" value="120">
+          <span class="ctrl-val" id="ctrl-fireball-val">120</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Shockwave</label>
+          <input type="range" id="ctrl-shockwave" min="50" max="600" value="350">
+          <span class="ctrl-val" id="ctrl-shockwave-val">350</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Shake</label>
+          <input type="range" id="ctrl-shake" min="0" max="100" value="80">
+          <span class="ctrl-val" id="ctrl-shake-val">80%</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Flash</label>
+          <input type="range" id="ctrl-flash" min="0" max="100" value="90">
+          <span class="ctrl-val" id="ctrl-flash-val">90%</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Debris</label>
+          <input type="range" id="ctrl-debris" min="0" max="50" value="15">
+          <span class="ctrl-val" id="ctrl-debris-val">15</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Smoke</label>
+          <input type="range" id="ctrl-smoke" min="0" max="40" value="18">
+          <span class="ctrl-val" id="ctrl-smoke-val">18</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Sparks</label>
+          <input type="range" id="ctrl-sparks" min="10" max="150" value="50">
+          <span class="ctrl-val" id="ctrl-sparks-val">50</span>
+        </div>
+        </div>
+
+        <!-- COLLISION SETTINGS (collapsible) -->
+        <h3 onclick="this.nextElementSibling.classList.toggle('collapsed')" style="cursor:pointer">&#9656; Collision</h3>
+        <div class="collapsed" style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;">
+          <div class="ctrl-row">
+            <label>Distance</label>
+            <input type="range" id="ctrl-col-dist" min="50" max="150" value="90">
+            <span class="ctrl-val" id="ctrl-col-dist-val">0.90</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Elasticity</label>
+            <input type="range" id="ctrl-col-elastic" min="0" max="100" value="80">
+            <span class="ctrl-val" id="ctrl-col-elastic-val">0.80</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Hot threshold (0=off)</label>
+            <input type="range" id="ctrl-col-hot" min="0" max="11" value="7">
+            <span class="ctrl-val" id="ctrl-col-hot-val">7</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Cold threshold (11=off)</label>
+            <input type="range" id="ctrl-col-cold" min="0" max="11" value="3">
+            <span class="ctrl-val" id="ctrl-col-cold-val">3</span>
+          </div>
+
+          <div style="grid-column:1/-1;border-top:1px solid var(--border);padding-top:8px;font-size:11px;opacity:0.6;font-weight:600;">HOT + COLD</div>
+          <div class="ctrl-row"><label>Enabled</label><input type="checkbox" id="ctrl-col-hotcold-en" checked></div>
+          <div class="ctrl-row">
+            <label>Blast force</label>
+            <input type="range" id="ctrl-col-blast" min="0" max="120" value="40">
+            <span class="ctrl-val" id="ctrl-col-blast-val">40</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Cooldown</label>
+            <input type="range" id="ctrl-col-cooldown" min="0" max="120" value="30">
+            <span class="ctrl-val" id="ctrl-col-cooldown-val">30</span>
+          </div>
+
+          <div style="grid-column:1/-1;border-top:1px solid var(--border);padding-top:8px;font-size:11px;opacity:0.6;font-weight:600;">HOT + HOT</div>
+          <div class="ctrl-row"><label>Enabled</label><input type="checkbox" id="ctrl-col-hothot-en" checked></div>
+          <div class="ctrl-row">
+            <label>Force</label>
+            <input type="range" id="ctrl-col-hothot-force" min="0" max="80" value="20">
+            <span class="ctrl-val" id="ctrl-col-hothot-force-val">20</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Cooldown</label>
+            <input type="range" id="ctrl-col-hothot-cd" min="0" max="120" value="15">
+            <span class="ctrl-val" id="ctrl-col-hothot-cd-val">15</span>
+          </div>
+
+          <div style="grid-column:1/-1;border-top:1px solid var(--border);padding-top:8px;font-size:11px;opacity:0.6;font-weight:600;">COLD + COLD</div>
+          <div class="ctrl-row"><label>Enabled</label><input type="checkbox" id="ctrl-col-coldcold-en" checked></div>
+          <div class="ctrl-row">
+            <label>Force</label>
+            <input type="range" id="ctrl-col-coldcold-force" min="0" max="80" value="12">
+            <span class="ctrl-val" id="ctrl-col-coldcold-force-val">12</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Cooldown</label>
+            <input type="range" id="ctrl-col-coldcold-cd" min="0" max="120" value="20">
+            <span class="ctrl-val" id="ctrl-col-coldcold-cd-val">20</span>
+          </div>
+
+          <div style="grid-column:1/-1;border-top:1px solid var(--border);padding-top:8px;font-size:11px;opacity:0.6;font-weight:600;">MERGE (neutral + neutral, slow)</div>
+          <div class="ctrl-row"><label>Enabled</label><input type="checkbox" id="ctrl-col-merge-en" checked></div>
+          <div class="ctrl-row">
+            <label>Speed threshold</label>
+            <input type="range" id="ctrl-col-merge-speed" min="1" max="30" value="6">
+            <span class="ctrl-val" id="ctrl-col-merge-speed-val">6</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Duration (frames)</label>
+            <input type="range" id="ctrl-col-merge-dur" min="20" max="400" value="150">
+            <span class="ctrl-val" id="ctrl-col-merge-dur-val">150</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Pop force</label>
+            <input type="range" id="ctrl-col-merge-force" min="0" max="40" value="10">
+            <span class="ctrl-val" id="ctrl-col-merge-force-val">10</span>
+          </div>
+        </div>
+
+        <!-- FIRE SETTINGS (collapsible) -->
+        <h3 onclick="this.nextElementSibling.classList.toggle('collapsed')" style="cursor:pointer">&#9656; Fire Settings</h3>
+        <div class="collapsed" style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;">
+          <div class="ctrl-row" style="grid-column:1/-1;">
+            <label>Fire style</label>
+            <select id="ctrl-fire-style" style="flex:1;padding:4px;border:1px solid var(--border);border-radius:4px;background:var(--card-bg);color:var(--text);font-size:12px;">
+              <option value="particles">Particles (ver3, default)</option>
+              <option value="doom">DOOM cellular (ver1)</option>
+            </select>
+          </div>
+          <div class="ctrl-row">
+            <label>DOOM intensity</label>
+            <input type="range" id="ctrl-fire-doomIntensity" min="30" max="200" value="100">
+            <span class="ctrl-val" id="ctrl-fire-doomIntensity-val">1.0</span>
+          </div>
+          <div class="ctrl-row">
+            <label>DOOM trail</label>
+            <input type="range" id="ctrl-fire-doomTrailPower" min="30" max="300" value="100">
+            <span class="ctrl-val" id="ctrl-fire-doomTrailPower-val">1.0</span>
+          </div>
+          <div class="ctrl-row"><label>Fire</label><input type="checkbox" id="ctrl-fire-fire" checked></div>
+          <div class="ctrl-row"><label>Sparks</label><input type="checkbox" id="ctrl-fire-sparks" checked></div>
+          <div class="ctrl-row">
+            <label>Fire speed</label>
+            <input type="range" id="ctrl-fire-fireSpeed" min="1" max="20" value="7">
+            <span class="ctrl-val" id="ctrl-fire-fireSpeed-val">0.7</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Max particles</label>
+            <input type="range" id="ctrl-fire-maxParticles" min="30" max="400" value="261">
+            <span class="ctrl-val" id="ctrl-fire-maxParticles-val">261</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Base size</label>
+            <input type="range" id="ctrl-fire-baseSize" min="3" max="40" value="19">
+            <span class="ctrl-val" id="ctrl-fire-baseSize-val">19</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Base life</label>
+            <input type="range" id="ctrl-fire-baseLife" min="10" max="80" value="10">
+            <span class="ctrl-val" id="ctrl-fire-baseLife-val">10</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Fade alpha</label>
+            <input type="range" id="ctrl-fire-fadeAlpha" min="1" max="20" value="20">
+            <span class="ctrl-val" id="ctrl-fire-fadeAlpha-val">0.20</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Flame height</label>
+            <input type="range" id="ctrl-fire-flameHeight" min="5" max="50" value="5">
+            <span class="ctrl-val" id="ctrl-fire-flameHeight-val">0.5</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Flame width</label>
+            <input type="range" id="ctrl-fire-flameWidth" min="2" max="20" value="2">
+            <span class="ctrl-val" id="ctrl-fire-flameWidth-val">0.2</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Spawn arc</label>
+            <input type="range" id="ctrl-fire-spawnArc" min="30" max="360" value="360">
+            <span class="ctrl-val" id="ctrl-fire-spawnArc-val">360</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Spawn offset</label>
+            <input type="range" id="ctrl-fire-spawnOffset" min="0" max="15" value="9">
+            <span class="ctrl-val" id="ctrl-fire-spawnOffset-val">0.9</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Buoyancy</label>
+            <input type="range" id="ctrl-fire-buoyancy" min="0" max="15" value="0">
+            <span class="ctrl-val" id="ctrl-fire-buoyancy-val">0.00</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Turbulence</label>
+            <input type="range" id="ctrl-fire-turbulence" min="0" max="20" value="1">
+            <span class="ctrl-val" id="ctrl-fire-turbulence-val">0.1</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Taper</label>
+            <input type="range" id="ctrl-fire-taper" min="-20" max="30" value="0">
+            <span class="ctrl-val" id="ctrl-fire-taper-val">0.00</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Glow intensity</label>
+            <input type="range" id="ctrl-fire-glowIntensity" min="0" max="30" value="0">
+            <span class="ctrl-val" id="ctrl-fire-glowIntensity-val">0</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Glow size</label>
+            <input type="range" id="ctrl-fire-glowSize" min="5" max="80" value="25">
+            <span class="ctrl-val" id="ctrl-fire-glowSize-val">2.5</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Spark rate</label>
+            <input type="range" id="ctrl-fire-sparkRate" min="0" max="20" value="4">
+            <span class="ctrl-val" id="ctrl-fire-sparkRate-val">4</span>
+          </div>
+          <div class="ctrl-row" style="grid-column:1/-1;">
+            <label>Preset</label>
+            <select id="fire-preset-list" style="flex:1;padding:4px;border:1px solid var(--border);border-radius:4px;background:var(--card-bg);color:var(--text);font-size:12px;">
+              <option value="">-- select --</option>
+              <option value="campfire">Campfire</option>
+              <option value="torch">Torch</option>
+              <option value="inferno">Inferno</option>
+              <option value="candle">Candle</option>
+              <option value="lava">Lava</option>
+              <option value="plasma">Plasma</option>
+            </select>
+            <button id="btn-fire-preset" style="padding:4px 10px;font-size:11px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:var(--card-bg);color:var(--text);">Apply</button>
+          </div>
+        </div>
+
+        <!-- LIQUID SETTINGS (collapsible) -->
+        <h3 onclick="this.nextElementSibling.classList.toggle('collapsed')" style="cursor:pointer">&#9656; Liquid Settings</h3>
+        <div class="collapsed" style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;">
+          <div class="ctrl-row">
+            <label>Fill %</label>
+            <input type="range" id="ctrl-liq-fill" min="10" max="90" value="50">
+            <span class="ctrl-val" id="ctrl-liq-fill-val">0.50</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Columns</label>
+            <input type="range" id="ctrl-liq-cols" min="8" max="48" value="24">
+            <span class="ctrl-val" id="ctrl-liq-cols-val">24</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Spring</label>
+            <input type="range" id="ctrl-liq-spring" min="1" max="15" value="4">
+            <span class="ctrl-val" id="ctrl-liq-spring-val">0.04</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Damping</label>
+            <input type="range" id="ctrl-liq-damping" min="950" max="999" value="980">
+            <span class="ctrl-val" id="ctrl-liq-damping-val">0.98</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Spread</label>
+            <input type="range" id="ctrl-liq-spread" min="5" max="50" value="30">
+            <span class="ctrl-val" id="ctrl-liq-spread-val">0.30</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Sloshing</label>
+            <input type="range" id="ctrl-liq-sloshing" min="1" max="30" value="12">
+            <span class="ctrl-val" id="ctrl-liq-sloshing-val">1.2</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Substeps</label>
+            <input type="range" id="ctrl-liq-substeps" min="1" max="8" value="3">
+            <span class="ctrl-val" id="ctrl-liq-substeps-val">3</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Layers</label>
+            <input type="range" id="ctrl-liq-layers" min="1" max="5" value="3">
+            <span class="ctrl-val" id="ctrl-liq-layers-val">3</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Inner splash</label>
+            <input type="range" id="ctrl-liq-innerSplash" min="0" max="20" value="10">
+            <span class="ctrl-val" id="ctrl-liq-innerSplash-val">10</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Outer splash</label>
+            <input type="range" id="ctrl-liq-outerSplash" min="0" max="20" value="5">
+            <span class="ctrl-val" id="ctrl-liq-outerSplash-val">5</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Cracks</label>
+            <input type="range" id="ctrl-liq-cracks" min="0" max="12" value="4">
+            <span class="ctrl-val" id="ctrl-liq-cracks-val">4</span>
+          </div>
+          <div class="ctrl-row"><label>Surface glow</label><input type="checkbox" id="ctrl-liq-surfaceGlow" checked></div>
+          <div class="ctrl-row"><label>Embers</label><input type="checkbox" id="ctrl-liq-embers" checked></div>
+          <div class="ctrl-row"><label>Bubbles</label><input type="checkbox" id="ctrl-liq-bubbles" checked></div>
+          <div class="ctrl-row"><label>Glass</label><input type="checkbox" id="ctrl-liq-glass" checked></div>
+        </div>
+
+        <!-- PERFORMANCE (collapsible) -->
+        <h3 onclick="this.nextElementSibling.classList.toggle('collapsed')" style="cursor:pointer">&#9656; Performance</h3>
+        <div class="collapsed" style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;">
+          <div class="ctrl-row">
+            <label>Max total</label>
+            <input type="range" id="ctrl-perf-maxTotal" min="200" max="10000" value="5000" step="100">
+            <span class="ctrl-val" id="ctrl-perf-maxTotal-val">5000</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Grad cutoff</label>
+            <input type="range" id="ctrl-perf-gradCutoff" min="0" max="15" value="0">
+            <span class="ctrl-val" id="ctrl-perf-gradCutoff-val">0</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Spawn skip</label>
+            <input type="range" id="ctrl-perf-spawnSkip" min="1" max="4" value="1">
+            <span class="ctrl-val" id="ctrl-perf-spawnSkip-val">1</span>
+          </div>
+          <div class="ctrl-row"><label>Pooling</label><input type="checkbox" id="ctrl-perf-pooling" checked></div>
+          <div class="ctrl-row"><label>Auto quality</label><input type="checkbox" id="ctrl-perf-autoQuality" checked></div>
+        </div>
+      </div>
+      <div style="margin-top:10px;display:flex;align-items:center;gap:8px;font-size:12px;opacity:0.7;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="ctrl-fps"> FPS</label>
+        <button id="btn-record-log" style="padding:3px 10px;font-size:11px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:var(--card-bg);color:var(--text);">Record</button>
+        <button id="btn-export-log" style="padding:3px 10px;font-size:11px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:var(--card-bg);color:var(--text);display:none;">Export</button>
+        <span id="log-status" style="font-size:11px;"></span>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px;">
+        <button id="btn-reset" style="flex:1;padding:10px 0;font-size:12px;font-weight:600;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:var(--card-bg);color:var(--text);text-transform:uppercase;letter-spacing:1px;transition:all 0.2s;">Reset</button>
+        <button id="btn-explode" style="flex:2;padding:10px 0;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;background:linear-gradient(135deg,#ff4400,#ff8800);color:#fff;text-transform:uppercase;letter-spacing:2px;box-shadow:0 0 20px rgba(255,68,0,0.4);transition:all 0.2s;">Detonate</button>
+      </div>
+    </div>
+
+    <div id="sliders-container"></div>
+  </div>
+
+<!-- === lava-orb v3b engine + adapter (replaces ver3a engine IIFE) === -->
+<script src="../dist/lava-orb.js"></script>
+<script>
+(function() {
+  'use strict';
+
+  var ORB_SIZE = 60;
+  var allHandles = [];
+  var sliderHandles = [];
+  var showcaseHandles = [];
+
+  var group = LavaOrb.createGroup({ name: 'demo', interactions: true });
+
+  function applyTune(key, value) {
+    for (var i = 0; i < allHandles.length; i++) {
+      var h = allHandles[i];
+      if (h.orb && h.orb.TUNE && key in h.orb.TUNE) h.orb.TUNE[key] = value;
+    }
+  }
+  function applyFire(key, value) {
+    for (var i = 0; i < allHandles.length; i++) {
+      var h = allHandles[i];
+      if (h.orb && h.orb.FIRE) h.orb.FIRE[key] = value;
+    }
+  }
+  function applyLiquid(key, value) {
+    for (var i = 0; i < allHandles.length; i++) {
+      var h = allHandles[i];
+      if (h.orb && h.orb.LIQUID) h.orb.LIQUID[key] = value;
+    }
+  }
+
+  // SHOWCASE — 10 states
+  function buildShowcase() {
+    var grid = document.getElementById('showcase-grid');
+    if (!grid) return;
+    showcaseHandles.forEach(function(h) { h.destroy(); });
+    showcaseHandles = [];
+    grid.innerHTML = '';
+    for (var v = 1; v <= 10; v++) {
+      var item = document.createElement('div');
+      item.className = 'showcase-item';
+      var wrapper = document.createElement('div');
+      wrapper.className = 'orb-wrapper';
+      wrapper.style.cssText = 'width:' + ORB_SIZE + 'px;height:' + ORB_SIZE + 'px;position:relative;overflow:visible;';
+      var hiddenInput = document.createElement('input');
+      hiddenInput.type = 'range';
+      hiddenInput.min = '1'; hiddenInput.max = '10'; hiddenInput.value = String(v);
+      hiddenInput.style.cssText = 'display:none;';
+      wrapper.appendChild(hiddenInput);
+      item.appendChild(wrapper);
+      var label = document.createElement('div');
+      label.className = 'orb-label';
+      label.textContent = v;
+      item.appendChild(label);
+      grid.appendChild(item);
+      var h = LavaOrb.attach(hiddenInput, { size: ORB_SIZE, group: group, detach: false });
+      h.setVal(v);
+      showcaseHandles.push(h);
+      allHandles.push(h);
+    }
+  }
+
+  // SLIDERS
+  var sliderDemos = [
+    { label: 'Satisfaction', val: 3 },
+    { label: 'Temperature', val: 7 },
+    { label: 'Intensity', val: 10 },
+    { label: 'Priority', val: 1 }
+  ];
+
+  function buildSliders() {
+    var container = document.getElementById('sliders-container');
+    if (!container) return;
+    sliderHandles.forEach(function(h) { h.destroy(); });
+    sliderHandles = [];
+    container.innerHTML = '';
+
+    sliderDemos.forEach(function(demo) {
+      var card = document.createElement('div');
+      card.className = 'slider-card';
+      var labelRow = document.createElement('div');
+      labelRow.className = 'slider-label';
+      var span = document.createElement('span');
+      span.textContent = demo.label;
+      labelRow.appendChild(span);
+      var badge = document.createElement('div');
+      badge.className = 'value-badge';
+      badge.textContent = demo.val;
+      labelRow.appendChild(badge);
+      card.appendChild(labelRow);
+
+      var row = document.createElement('div');
+      row.className = 'slider-row';
+
+      var trackBar = document.createElement('div');
+      trackBar.className = 'slider-track-bar';
+      var trackFill = document.createElement('div');
+      trackFill.className = 'slider-track-fill';
+      trackBar.appendChild(trackFill);
+      row.appendChild(trackBar);
+
+      var input = document.createElement('input');
+      input.type = 'range'; input.min = '1'; input.max = '10'; input.value = demo.val;
+      row.appendChild(input);
+
+      card.appendChild(row);
+      container.appendChild(card);
+
+      var h = LavaOrb.attach(input, {
+        size: ORB_SIZE,
+        group: group,
+        detach: true,
+        onChange: function(v) {
+          badge.textContent = v;
+          var pal = LavaOrb.getPalette(v, document.body.getAttribute('data-theme') === 'dark');
+          badge.style.background = pal[0];
+          trackFill.style.width = ((v - 1) / 9 * 100) + '%';
+          trackFill.style.background = pal[0];
+          card.classList.toggle('fire-active', v >= 9);
+          card.classList.toggle('fire-intense', v >= 10);
+          card.classList.toggle('frost-active', v <= 2);
+          card.classList.toggle('frost-intense', v <= 1);
+          trackBar.classList.toggle('track-fire', v >= 8 && v < 10);
+          trackBar.classList.toggle('track-fire-intense', v >= 10);
+          trackBar.classList.toggle('track-frost', v <= 2 && v > 1);
+          trackBar.classList.toggle('track-frost-intense', v <= 1);
+        }
+      });
+      input.dispatchEvent(new Event('input'));
+      sliderHandles.push(h);
+      allHandles.push(h);
+    });
+  }
+
+  // CONTROLS wire-up
+  function setupCtrl(id, fmt, applyFn) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var valEl = document.getElementById(id + '-val');
+    function apply() {
+      var v = parseFloat(el.value);
+      if (valEl) valEl.textContent = fmt(v);
+      applyFn(v);
+    }
+    el.addEventListener('input', apply);
+    apply();
+  }
+
+  var _sizeInited = false;
+  setupCtrl('ctrl-size', function(v) { return v; }, function(v) {
+    ORB_SIZE = v;
+    document.documentElement.style.setProperty('--orb-size', v + 'px');
+    if (_sizeInited) { buildShowcase(); buildSliders(); }
+    _sizeInited = true;
+  });
+  setupCtrl('ctrl-bounce', function(v) { return (v/100).toFixed(2); }, function(v) { applyTune('bounce', v / 100); });
+  setupCtrl('ctrl-speed', function(v) { return (v/100).toFixed(1)+'x'; }, function(v) { applyTune('speed', v / 100); });
+  setupCtrl('ctrl-intensity', function(v) { return v + '%'; }, function(v) { applyTune('intensity', v / 100); });
+  setupCtrl('ctrl-radius', function(v) { return v + '%'; }, function(v) { applyTune('fxRadius', v / 100); });
+  setupCtrl('ctrl-gravity', function(v) { return (v/100).toFixed(2); }, function(v) { applyTune('gravity', v / 100); });
+  setupCtrl('ctrl-particles', function(v) { return Math.round(v); }, function(v) { applyTune('particles', Math.round(v)); });
+  setupCtrl('ctrl-sloshing', function(v) { return v + '%'; }, function(v) { applyTune('sloshing', v / 100); });
+  setupCtrl('ctrl-trail', function(v) { return (v/100).toFixed(1)+'x'; }, function(v) { applyTune('trail', v / 100); });
+  setupCtrl('ctrl-blast', function(v) { return v + '%'; }, function(v) { applyTune('blastPower', v / 100); });
+  setupCtrl('ctrl-fireball', function(v) { return Math.round(v); }, function(v) { applyTune('fireball', Math.round(v)); });
+  setupCtrl('ctrl-shockwave', function(v) { return Math.round(v); }, function(v) { applyTune('shockwave', Math.round(v)); });
+  setupCtrl('ctrl-shake', function(v) { return v + '%'; }, function(v) { applyTune('shake', v / 100); });
+  setupCtrl('ctrl-flash', function(v) { return v + '%'; }, function(v) { applyTune('flash', v / 100); });
+  setupCtrl('ctrl-debris', function(v) { return Math.round(v); }, function(v) { applyTune('debris', Math.round(v)); });
+  setupCtrl('ctrl-smoke', function(v) { return Math.round(v); }, function(v) { applyTune('smoke', Math.round(v)); });
+  setupCtrl('ctrl-sparks', function(v) { return Math.round(v); }, function(v) { applyTune('sparks', Math.round(v)); });
+
+  ['fire','sparks'].forEach(function(k) {
+    var el = document.getElementById('ctrl-fire-' + k);
+    if (!el) return;
+    el.addEventListener('change', function() { applyFire(k, this.checked); });
+  });
+
+  [['fireSpeed',10,1],['maxParticles',1,0],['baseSize',1,0],['baseLife',1,0],['fadeAlpha',100,2],
+   ['flameHeight',10,1],['flameWidth',10,1],['spawnArc',1,0],['spawnOffset',10,1],['buoyancy',100,2],
+   ['turbulence',10,1],['taper',100,2],['glowIntensity',1,0],['glowSize',10,1],['sparkRate',1,0],
+   ['doomIntensity',100,2],['doomTrailPower',100,2]
+  ].forEach(function(spec) {
+    var k = spec[0], scale = spec[1], digits = spec[2];
+    setupCtrl('ctrl-fire-' + k, function(v) {
+      var val = v / scale;
+      return digits === 0 ? Math.round(val) : val.toFixed(digits);
+    }, function(v) { applyFire(k, v / scale); });
+  });
+
+  var fireStyleSel = document.getElementById('ctrl-fire-style');
+  if (fireStyleSel) {
+    fireStyleSel.addEventListener('change', function() { applyFire('style', this.value); });
+  }
+
+  var firePresetBtn = document.getElementById('btn-fire-preset');
+  var firePresetSel = document.getElementById('fire-preset-list');
+  if (firePresetBtn && firePresetSel) {
+    firePresetBtn.addEventListener('click', function() {
+      var name = firePresetSel.value;
+      // Полные пресеты из ver3a fire-particle-editor — каждый набор калиброван визуально
+      var presets = {
+        campfire: { maxParticles:329, sparkRate:2, fadeAlpha:0.18, baseSize:13, baseLife:40, turbulence:1, taper:0.01, flameHeight:3.8, flameWidth:2, spawnArc:360, spawnOffset:0.6, buoyancy:0.13, glowIntensity:8, smokeSize:20, smokeHeight:2.5, smokePuff:0.8 },
+        torch:    { maxParticles:329, sparkRate:2, fadeAlpha:0.14, baseSize:40, baseLife:40, turbulence:1, taper:0.05, flameHeight:1.9, flameWidth:2, spawnArc:309, spawnOffset:0.6, buoyancy:0.13, glowIntensity:30, smokeSize:20, smokeHeight:1.9, smokePuff:2 },
+        inferno:  { maxParticles:350, sparkRate:20, fadeAlpha:0.03, baseSize:18, baseLife:30, turbulence:1, taper:0.01, flameHeight:2.2, flameWidth:1.1, spawnArc:360, spawnOffset:1, buoyancy:0.03, glowIntensity:0, smokeSize:20, smokeHeight:2, smokePuff:1 },
+        candle:   { maxParticles:360, sparkRate:0, fadeAlpha:0.2, baseSize:23, baseLife:40, turbulence:2, taper:0.05, flameHeight:0.5, flameWidth:1.4, spawnArc:30, spawnOffset:0, buoyancy:0.14, glowIntensity:10, smokeSize:20, smokeHeight:1.9, smokePuff:2 },
+        lava:     { maxParticles:261, sparkRate:13, fadeAlpha:0.2, baseSize:19, baseLife:40, turbulence:0.1, taper:0, flameHeight:0.5, flameWidth:0.2, spawnArc:360, spawnOffset:0.9, buoyancy:0, glowIntensity:26, smokeSize:14, smokeHeight:1.9, smokePuff:2 },
+        plasma:   { maxParticles:261, sparkRate:4, fadeAlpha:0.2, baseSize:19, baseLife:10, turbulence:0.1, taper:0, flameHeight:0.5, flameWidth:0.2, spawnArc:360, spawnOffset:0.9, buoyancy:0, glowIntensity:0, smokeSize:14, smokeHeight:1.9, smokePuff:2 }
+      };
+      var p = presets[name];
+      if (!p) return;
+      for (var k in p) applyFire(k, p[k]);
+      // Sync UI ползунков с применёнными значениями (чтобы юзер видел что поменялось)
+      var scaleMap = { fireSpeed:10, fadeAlpha:100, flameHeight:10, flameWidth:10, spawnOffset:10,
+        buoyancy:100, turbulence:10, taper:100, glowSize:10, smokeHeight:10, smokePuff:10 };
+      for (var k2 in p) {
+        var el = document.getElementById('ctrl-fire-' + k2);
+        var valEl = document.getElementById('ctrl-fire-' + k2 + '-val');
+        if (el) {
+          var scale = scaleMap[k2] || 1;
+          el.value = Math.round(p[k2] * scale);
+          if (valEl) {
+            // Recompute display text
+            el.dispatchEvent(new Event('input'));
+          }
+        }
+      }
+    });
+  }
+
+  // Liquid settings — IDs в HTML ctrl-liq-* (не ctrl-liquid-*)
+  [['fill',100,2],['cols',1,0],['spring',1000,3],['damping',1000,3],['spread',100,2],['sloshing',100,1],
+   ['substeps',1,0],['layers',1,0],['innerSplash',1,0],['outerSplash',1,0],['cracks',1,0]
+  ].forEach(function(spec) {
+    var k = spec[0], scale = spec[1], digits = spec[2];
+    setupCtrl('ctrl-liq-' + k, function(v) {
+      var val = v / scale;
+      return digits === 0 ? Math.round(val) : val.toFixed(digits);
+    }, function(v) { applyLiquid(k, v / scale); });
+  });
+  // Liquid checkboxes
+  ['surfaceGlow', 'embers', 'bubbles', 'glass'].forEach(function(k) {
+    var el = document.getElementById('ctrl-liq-' + k);
+    if (!el) return;
+    applyLiquid(k, el.checked);
+    el.addEventListener('change', function() { applyLiquid(k, this.checked); });
+  });
+
+  // Collision settings — TUNE.col* параметры + checkboxes
+  var colMap = [
+    ['dist',         100, 2, 'colDist'],
+    ['elastic',      100, 2, 'colElastic'],
+    ['blast',        1,   0, 'colBlast'],
+    ['cooldown',     1,   0, 'colCooldown'],
+    ['hot',          1,   0, 'hotThresh'],
+    ['cold',         1,   0, 'coldThresh'],
+    ['hothot-force', 1,   0, 'colHotHotForce'],
+    ['hothot-cd',    1,   0, 'colHotHotCooldown'],
+    ['coldcold-force', 1, 0, 'colColdColdForce'],
+    ['coldcold-cd',  1,   0, 'colColdColdCooldown'],
+    ['merge-speed',  1,   0, 'colMergeSpeedThresh'],
+    ['merge-dur',    1,   0, 'colMergeDuration'],
+    ['merge-force',  1,   0, 'colMergeForce']
+  ];
+  colMap.forEach(function(spec) {
+    var suf = spec[0], scale = spec[1], digits = spec[2], tuneKey = spec[3];
+    setupCtrl('ctrl-col-' + suf, function(v) {
+      var val = v / scale;
+      return digits === 0 ? Math.round(val) : val.toFixed(digits);
+    }, function(v) { applyTune(tuneKey, v / scale); });
+  });
+  // Collision checkboxes
+  [['hotcold-en','colHotColdEnabled'],['hothot-en','colHotHotEnabled'],
+   ['coldcold-en','colColdColdEnabled'],['merge-en','colMergeEnabled']
+  ].forEach(function(pair) {
+    var el = document.getElementById('ctrl-col-' + pair[0]);
+    if (!el) return;
+    applyTune(pair[1], el.checked ? 1 : 0);
+    el.addEventListener('change', function() { applyTune(pair[1], this.checked ? 1 : 0); });
+  });
+
+  var btnReset = document.getElementById('btn-reset');
+  if (btnReset) {
+    btnReset.addEventListener('click', function() {
+      document.querySelectorAll('input[type="range"][id^="ctrl-"]').forEach(function(el) {
+        var def = el.defaultValue;
+        if (def != null) { el.value = def; el.dispatchEvent(new Event('input')); }
+      });
+      allHandles.forEach(function(h) {
+        if (h.orb && h.orb._detached && h.orb.reattach) h.orb.reattach();
+      });
+    });
+  }
+
+  var btnExplode = document.getElementById('btn-explode');
+  if (btnExplode) {
+    btnExplode.addEventListener('click', function() {
+      var cx = window.innerWidth / 2;
+      var cy = window.innerHeight / 2;
+      if (group.cinematicExplosion) group.cinematicExplosion(cx, cy);
+      sliderHandles.forEach(function(h) {
+        if (h.orb && !h.orb._detached && h.orb.detach) {
+          h.orb.detach(h.orbEl, 0);
+          var st = h.orb._detachState;
+          if (st) {
+            var rect = h.orbEl.getBoundingClientRect();
+            var ox = rect.left + ORB_SIZE / 2;
+            var oy = rect.top + ORB_SIZE / 2;
+            var wdx = ox - cx, wdy = oy - cy;
+            var wdist = Math.sqrt(wdx * wdx + wdy * wdy) || 1;
+            var force = Math.max(8, 30 - wdist * 0.03);
+            st.fvx = (wdx / wdist) * force;
+            st.fvy = (wdy / wdist) * force - 10;
+          }
+        }
+      });
+    });
+  }
+
+  var themeToggle = document.getElementById('theme-toggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', function() {
+      var isDark = document.body.getAttribute('data-theme') === 'dark';
+      document.body.setAttribute('data-theme', isDark ? '' : 'dark');
+      localStorage.setItem('lava-orb-theme', isDark ? 'light' : 'dark');
+      allHandles.forEach(function(h) {
+        if (h.orb && h.input) {
+          var v = parseFloat(h.input.value);
+          var pal = LavaOrb.getPalette(v, !isDark);
+          h.orb.setColors(pal);
+        }
+      });
+    });
+  }
+
+  var savedTheme = localStorage.getItem('lava-orb-theme');
+  if (savedTheme !== 'light') {
+    document.body.setAttribute('data-theme', 'dark');
+  }
+
+  buildShowcase();
+  buildSliders();
+
+  console.log('lava-orb v3b demo ready. Version:', LavaOrb.VERSION, '| Orbs:', allHandles.length);
+})();
+</script>
+
+<script>
+/* ========== Interactive Page Background System ========== */
+(function() {
+  'use strict';
+
+  var bgCanvas = document.getElementById('bg-canvas');
+  var bgSelect = document.getElementById('bg-select');
+  var bgMode = 'none';
+  var gl = null;
+  var bgPrograms = {};
+  var bgQuadBuf = null;
+  var bgAnimId = null;
+  var bgStartTime = 0;
+  var useFallback = false;
+  var ctx2d = null;
+
+  // --- WebGL2 setup ---
+  function initBgGL() {
+    gl = bgCanvas.getContext('webgl2', { alpha: true, premultipliedAlpha: false, antialias: false });
+    if (!gl) {
+      useFallback = true;
+      ctx2d = bgCanvas.getContext('2d');
+      return;
+    }
+    // Fullscreen quad (two triangles)
+    var verts = new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]);
+    bgQuadBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, bgQuadBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, verts, gl.STATIC_DRAW);
+
+    compileProgram('embers', BG_VS, BG_FS_EMBERS);
+    compileProgram('aurora', BG_VS, BG_FS_AURORA);
+    compileProgram('grid', BG_VS, BG_FS_GRID);
+  }
+
+  function compileShader(type, src) {
+    var s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+      console.warn('BG shader error:', gl.getShaderInfoLog(s));
+      gl.deleteShader(s);
+      return null;
+    }
+    return s;
+  }
+
+  function compileProgram(name, vsSrc, fsSrc) {
+    var vs = compileShader(gl.VERTEX_SHADER, vsSrc);
+    var fs = compileShader(gl.FRAGMENT_SHADER, fsSrc);
+    if (!vs || !fs) return;
+    var prog = gl.createProgram();
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+      console.warn('BG program link error:', gl.getProgramInfoLog(prog));
+      return;
+    }
+    bgPrograms[name] = {
+      program: prog,
+      aPos: gl.getAttribLocation(prog, 'aPos'),
+      uTime: gl.getUniformLocation(prog, 'uTime'),
+      uRes: gl.getUniformLocation(prog, 'uResolution'),
+      uDark: gl.getUniformLocation(prog, 'uDark')
+    };
+  }
+
+  // --- Shader sources ---
+  var BG_VS = '#version 300 es\n\
+in vec2 aPos;\n\
+void main() { gl_Position = vec4(aPos, 0.0, 1.0); }\n';
+
+  var BG_FS_EMBERS = '#version 300 es\n\
+precision highp float;\n\
+uniform float uTime;\n\
+uniform vec2 uResolution;\n\
+uniform float uDark;\n\
+out vec4 fragColor;\n\
+\n\
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\n\
+\n\
+float vnoise(vec2 p) {\n\
+  vec2 i = floor(p), f = fract(p);\n\
+  f = f * f * (3.0 - 2.0 * f);\n\
+  float a = hash(i), b = hash(i + vec2(1,0));\n\
+  float c = hash(i + vec2(0,1)), d = hash(i + vec2(1,1));\n\
+  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);\n\
+}\n\
+\n\
+float fbm(vec2 p) {\n\
+  float v = 0.0, a = 0.5;\n\
+  for (int i = 0; i < 5; i++) { v += a * vnoise(p); p *= 2.0; a *= 0.5; }\n\
+  return v;\n\
+}\n\
+\n\
+void main() {\n\
+  vec2 uv = gl_FragCoord.xy / uResolution;\n\
+  float t = uTime * 0.08;\n\
+  float aspect = uResolution.x / uResolution.y;\n\
+  vec2 p = vec2(uv.x * aspect, uv.y);\n\
+\n\
+  // Base — глубокие тёплые тона. Dark: кофейные бордо. Light: персиково-кремовый.\n\
+  vec3 baseDark = mix(vec3(0.08, 0.02, 0.05), vec3(0.02, 0.005, 0.01), uv.y * 0.8);\n\
+  vec3 baseLight = mix(vec3(1.00, 0.95, 0.88), vec3(0.97, 0.88, 0.80), uv.y * 0.7);\n\
+  vec3 bg = mix(baseLight, baseDark, uDark);\n\
+\n\
+  // Flowing warm fog — 2 слоя fbm, двигаются в разные стороны\n\
+  float flow1 = fbm(p * 2.5 + vec2(t * 0.6, -t * 0.3));\n\
+  float flow2 = fbm(p * 4.0 + vec2(-t * 0.4, t * 0.5) + 10.0);\n\
+  float flow = flow1 * 0.65 + flow2 * 0.35;\n\
+  flow = smoothstep(0.35, 0.85, flow);\n\
+\n\
+  // Тёплый дифуз — оранжево-янтарный. Градация: от внизу насыщенного к верху затухающего.\n\
+  vec3 warmCoreDark = vec3(0.95, 0.35, 0.10);\n\
+  vec3 warmEdgeDark = vec3(0.55, 0.12, 0.30);\n\
+  vec3 warmCoreLight = vec3(1.00, 0.70, 0.45);\n\
+  vec3 warmEdgeLight = vec3(0.95, 0.80, 0.85);\n\
+\n\
+  vec3 warmCore = mix(warmCoreLight, warmCoreDark, uDark);\n\
+  vec3 warmEdge = mix(warmEdgeLight, warmEdgeDark, uDark);\n\
+  vec3 flowColor = mix(warmEdge, warmCore, flow);\n\
+\n\
+  // Вертикальное затухание — огонь/тепло снизу, холодный верх\n\
+  float vFade = 1.0 - smoothstep(0.0, 0.9, uv.y);\n\
+  vFade = vFade * vFade * 0.6 + 0.15;\n\
+\n\
+  float strength = mix(0.35, 0.60, uDark) * vFade;\n\
+  bg = mix(bg, flowColor, flow * strength);\n\
+\n\
+  // Редкие крупные blobs (2-3 штуки) — медленные, крупные, мягкие\n\
+  for (int i = 0; i < 3; i++) {\n\
+    float fi = float(i);\n\
+    float phase = fi * 2.1 + t * 0.3;\n\
+    vec2 center = vec2(\n\
+      aspect * 0.5 + sin(phase * 0.7 + fi) * aspect * 0.35,\n\
+      0.4 + cos(phase * 0.5 + fi * 1.3) * 0.25\n\
+    );\n\
+    float d = length(p - center);\n\
+    float radius = 0.18 + fract(fi * 1.7) * 0.12;\n\
+    float blob = smoothstep(radius, radius * 0.3, d);\n\
+    vec3 blobCol = mix(vec3(1.0, 0.55, 0.25), vec3(1.0, 0.3, 0.1), fract(fi * 2.3));\n\
+    blobCol = mix(vec3(1.0, 0.75, 0.55), blobCol, uDark);\n\
+    bg += blobCol * blob * mix(0.12, 0.25, uDark) * vFade;\n\
+  }\n\
+\n\
+  // Узкий горячий ореол внизу\n\
+  float bottomGlow = smoothstep(0.0, 0.35, 1.0 - uv.y);\n\
+  bg += vec3(0.8, 0.25, 0.05) * bottomGlow * bottomGlow * 0.15 * mix(0.3, 1.0, uDark);\n\
+\n\
+  // Мягкий vignette\n\
+  float vig = smoothstep(1.3, 0.3, length(uv - vec2(0.5, 0.55)) * 1.5);\n\
+  bg *= mix(0.75, 1.0, vig);\n\
+\n\
+  fragColor = vec4(clamp(bg, 0.0, 1.0), 1.0);\n\
+}\n';
+
+  var BG_FS_AURORA = '#version 300 es\n\
+precision highp float;\n\
+uniform float uTime;\n\
+uniform vec2 uResolution;\n\
+uniform float uDark;\n\
+out vec4 fragColor;\n\
+\n\
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\n\
+\n\
+// Value noise — дешевле simplex, для плавных аврора-волн хватает\n\
+float vnoise(vec2 p) {\n\
+  vec2 i = floor(p), f = fract(p);\n\
+  f = f * f * (3.0 - 2.0 * f);\n\
+  float a = hash(i), b = hash(i + vec2(1,0));\n\
+  float c = hash(i + vec2(0,1)), d = hash(i + vec2(1,1));\n\
+  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);\n\
+}\n\
+\n\
+float fbm(vec2 p) {\n\
+  float v = 0.0, a = 0.5;\n\
+  for (int i = 0; i < 4; i++) { v += a * vnoise(p); p *= 2.0; a *= 0.5; }\n\
+  return v;\n\
+}\n\
+\n\
+void main() {\n\
+  vec2 uv = gl_FragCoord.xy / uResolution;\n\
+  float t = uTime * 0.15;\n\
+\n\
+  // Sky gradient — deep night blue to near-black (dark) or pale blue (light)\n\
+  vec3 skyDark = mix(vec3(0.10, 0.04, 0.20), vec3(0.01, 0.01, 0.05), uv.y * uv.y);\n\
+  vec3 skyLight = mix(vec3(0.78, 0.85, 0.95), vec3(0.92, 0.95, 1.00), uv.y * uv.y);\n\
+  vec3 bg = mix(skyLight, skyDark, uDark);\n\
+\n\
+  // Star field — только верхняя часть, только в тёмной теме\n\
+  if (uv.y > 0.35) {\n\
+    vec2 sg = floor(gl_FragCoord.xy / 3.0);\n\
+    float sv = hash(sg);\n\
+    float star = step(0.992, sv);\n\
+    float twinkle = sin(t * 6.0 + sv * 30.0) * 0.5 + 0.5;\n\
+    bg += vec3(0.85, 0.9, 1.0) * star * (0.4 + 0.6 * twinkle) * uDark * smoothstep(0.35, 0.8, uv.y);\n\
+  }\n\
+\n\
+  // Aurora — две волнистые полосы через среднюю треть экрана\n\
+  float auroraMask = smoothstep(0.15, 0.45, uv.y) * smoothstep(0.95, 0.55, uv.y);\n\
+  if (auroraMask > 0.01) {\n\
+    // Wavy displacement — каждая полоса дрейфует по-своему\n\
+    float wave1 = fbm(vec2(uv.x * 2.5 + t * 0.4, uv.y * 5.0));\n\
+    float wave2 = fbm(vec2(uv.x * 3.5 - t * 0.3, uv.y * 4.0 + 5.0));\n\
+    float waveMix = wave1 * 0.6 + wave2 * 0.4;\n\
+\n\
+    // Полоса 1 — зелёно-бирюзовая\n\
+    float band1Y = 0.55 + waveMix * 0.15;\n\
+    float band1 = smoothstep(0.08, 0.0, abs(uv.y - band1Y));\n\
+    vec3 col1 = mix(vec3(0.3, 0.9, 0.6), vec3(0.1, 0.8, 0.7), wave1);\n\
+\n\
+    // Полоса 2 — фиолетово-розовая, смещена ниже\n\
+    float band2Y = 0.40 + wave2 * 0.12;\n\
+    float band2 = smoothstep(0.1, 0.0, abs(uv.y - band2Y));\n\
+    vec3 col2 = mix(vec3(0.6, 0.3, 0.9), vec3(0.9, 0.3, 0.7), wave2);\n\
+\n\
+    // Вертикальные «лучи» — стриаты\n\
+    float rays = fbm(vec2(uv.x * 20.0, t * 0.3)) * 0.5 + 0.5;\n\
+    rays = smoothstep(0.4, 0.8, rays);\n\
+\n\
+    float intensity = mix(0.35, 0.75, uDark) * auroraMask;\n\
+    bg += col1 * band1 * rays * intensity;\n\
+    bg += col2 * band2 * rays * intensity * 0.8;\n\
+\n\
+    // Glow поверх полос — мягкое свечение\n\
+    float glowY1 = smoothstep(0.25, 0.0, abs(uv.y - band1Y));\n\
+    float glowY2 = smoothstep(0.28, 0.0, abs(uv.y - band2Y));\n\
+    bg += col1 * glowY1 * 0.12 * intensity;\n\
+    bg += col2 * glowY2 * 0.10 * intensity;\n\
+  }\n\
+\n\
+  fragColor = vec4(clamp(bg, 0.0, 1.0), 1.0);\n\
+}\n';
+
+  var BG_FS_GRID = '#version 300 es\n\
+precision highp float;\n\
+uniform float uTime;\n\
+uniform vec2 uResolution;\n\
+uniform float uDark;\n\
+out vec4 fragColor;\n\
+\n\
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\n\
+\n\
+void main() {\n\
+  vec2 uv = gl_FragCoord.xy / uResolution;\n\
+  float t = uTime * 0.6;\n\
+  float aspect = uResolution.x / uResolution.y;\n\
+\n\
+  float horizon = 0.55;\n\
+  vec3 bg;\n\
+\n\
+  if (uv.y > horizon) {\n\
+    // === SKY ===\n\
+    float skyT = (uv.y - horizon) / (1.0 - horizon);\n\
+    // Dark: deep purple → magenta ниже\n\
+    vec3 skyTopD = vec3(0.03, 0.01, 0.15);\n\
+    vec3 skyHorD = vec3(0.55, 0.10, 0.45);\n\
+    // Light: lavender → peach\n\
+    vec3 skyTopL = vec3(0.92, 0.88, 0.98);\n\
+    vec3 skyHorL = vec3(0.98, 0.80, 0.85);\n\
+\n\
+    vec3 skyTop = mix(skyTopL, skyTopD, uDark);\n\
+    vec3 skyHor = mix(skyHorL, skyHorD, uDark);\n\
+    bg = mix(skyHor, skyTop, skyT * skyT);\n\
+\n\
+    // Солнце / диск над горизонтом. Полосы-стрипы как в синтвейве.\n\
+    vec2 sunCenter = vec2(aspect * 0.5, horizon + 0.18);\n\
+    vec2 p = vec2(uv.x * aspect, uv.y);\n\
+    float sunDist = length((p - sunCenter) * vec2(1.0, 1.3));\n\
+    float sun = smoothstep(0.22, 0.16, sunDist);\n\
+    // Горизонтальные стрипы только в нижней части солнца\n\
+    float stripePhase = (sunCenter.y - uv.y) * 45.0;\n\
+    float stripes = step(0.5, fract(stripePhase));\n\
+    float stripeMask = smoothstep(sunCenter.y, sunCenter.y - 0.18, uv.y);\n\
+    sun *= mix(1.0, stripes, stripeMask * 0.8);\n\
+    // Gradient внутри солнца — жёлтый в центре → оранжевый → розовый\n\
+    vec3 sunCol = mix(vec3(1.0, 0.85, 0.35), vec3(1.0, 0.35, 0.55), smoothstep(0.05, 0.22, sunDist));\n\
+    bg += sunCol * sun * mix(0.7, 1.0, uDark);\n\
+\n\
+    // Звёзды вверху (только в тёмной теме)\n\
+    vec2 sg = floor(gl_FragCoord.xy / 3.5);\n\
+    float sv = hash(sg);\n\
+    float star = step(0.993, sv);\n\
+    float twinkle = sin(t * 4.0 + sv * 40.0) * 0.5 + 0.5;\n\
+    bg += vec3(1.0, 0.95, 1.0) * star * (0.4 + 0.6 * twinkle) * uDark * skyT;\n\
+\n\
+  } else {\n\
+    // === GROUND — перспективная сетка ===\n\
+    vec3 groundD = mix(vec3(0.15, 0.02, 0.30), vec3(0.03, 0.01, 0.08), (horizon - uv.y) / horizon);\n\
+    vec3 groundL = mix(vec3(0.98, 0.85, 0.92), vec3(0.88, 0.75, 0.85), (horizon - uv.y) / horizon);\n\
+    bg = mix(groundL, groundD, uDark);\n\
+\n\
+    // Перспективный z (дальше от горизонта вниз = ближе к камере)\n\
+    float zDist = (horizon - uv.y);\n\
+    float z = 1.0 / (zDist + 0.02);\n\
+\n\
+    // Горизонтальные линии — убегающая перспектива с движением к камере\n\
+    float hLine = fract(z * 0.5 - t * 0.8);\n\
+    float hBrightness = smoothstep(0.92, 1.0, hLine) + smoothstep(0.08, 0.0, hLine);\n\
+    hBrightness = max(0.0, hBrightness);\n\
+\n\
+    // Вертикальные линии — расходятся от точки схода\n\
+    float centerX = 0.5;\n\
+    float vCoord = (uv.x - centerX) * z;\n\
+    float vLine = fract(vCoord * 2.2 + 0.5);\n\
+    float vBrightness = smoothstep(0.96, 1.0, vLine) + smoothstep(0.04, 0.0, vLine);\n\
+    vBrightness = max(0.0, vBrightness);\n\
+\n\
+    float gridBrightness = max(hBrightness, vBrightness);\n\
+\n\
+    // Затухание в глубину — дальние линии слабее\n\
+    float depthFade = smoothstep(0.0, horizon * 0.9, horizon - uv.y);\n\
+    gridBrightness *= depthFade;\n\
+\n\
+    // Неон — розовый → фиолетовый\n\
+    vec3 gridCol = mix(vec3(0.85, 0.45, 0.70), vec3(1.0, 0.30, 0.85), uDark);\n\
+    bg += gridCol * gridBrightness * mix(0.5, 0.9, uDark);\n\
+\n\
+    // Отражение солнца на земле — вертикальные полосы бликов возле центра\n\
+    float reflection = smoothstep(0.15, 0.0, abs(uv.x - 0.5)) * smoothstep(0.0, 0.4, horizon - uv.y);\n\
+    reflection *= (sin(uv.y * 60.0 + t * 2.0) * 0.5 + 0.5);\n\
+    bg += vec3(1.0, 0.55, 0.45) * reflection * 0.15 * mix(0.4, 1.0, uDark);\n\
+  }\n\
+\n\
+  // Horizon glow — яркая линия горизонта\n\
+  float horizonGlow = smoothstep(0.015, 0.0, abs(uv.y - horizon));\n\
+  bg += vec3(1.0, 0.6, 0.7) * horizonGlow * mix(0.5, 0.9, uDark);\n\
+\n\
+  fragColor = vec4(clamp(bg, 0.0, 1.0), 1.0);\n\
+}\n';
+
+  // --- Canvas resize ---
+  function resizeBgCanvas() {
+    var dpr = window.devicePixelRatio || 1;
+    // Limit resolution for performance
+    var maxDim = 1920;
+    var w = Math.min(window.innerWidth, maxDim);
+    var h = Math.min(window.innerHeight, maxDim);
+    bgCanvas.width = w * Math.min(dpr, 2);
+    bgCanvas.height = h * Math.min(dpr, 2);
+    if (gl) {
+      gl.viewport(0, 0, bgCanvas.width, bgCanvas.height);
+    }
+  }
+
+  // --- Render (WebGL) ---
+  function renderBgGL(time) {
+    var info = bgPrograms[bgMode];
+    if (!info) return;
+    var isDark = document.body.getAttribute('data-theme') === 'dark' ? 1.0 : 0.0;
+
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    gl.useProgram(info.program);
+    gl.uniform1f(info.uTime, time);
+    gl.uniform2f(info.uRes, bgCanvas.width, bgCanvas.height);
+    gl.uniform1f(info.uDark, isDark);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, bgQuadBuf);
+    gl.enableVertexAttribArray(info.aPos);
+    gl.vertexAttribPointer(info.aPos, 2, gl.FLOAT, false, 0, 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+  }
+
+  // --- Fallback Canvas2D renders ---
+  function renderBg2D(time) {
+    var w = bgCanvas.width, h = bgCanvas.height;
+    var isDark = document.body.getAttribute('data-theme') === 'dark';
+    ctx2d.clearRect(0, 0, w, h);
+
+    // 2D fallback — uses same function names as старые (чтобы не переписывать 100+ строк fallback-рендеров).
+    // Это просто запасной путь когда WebGL2 недоступен, визуально не идеально, но не критично.
+    if (bgMode === 'embers') { renderAbstract2D(time, w, h, isDark); }
+    else if (bgMode === 'aurora') { renderSpace2D(time, w, h, isDark); }
+    else if (bgMode === 'grid') { renderOcean2D(time, w, h, isDark); }
+  }
+
+  function renderAbstract2D(t, w, h, isDark) {
+    // Simple gradient blobs
+    ctx2d.globalCompositeOperation = 'source-over';
+    ctx2d.fillStyle = isDark ? '#0d1117' : '#f4f5f8';
+    ctx2d.fillRect(0, 0, w, h);
+    ctx2d.globalCompositeOperation = 'lighter';
+
+    var blobs = [
+      { phase: 0.7, phasey: 0.9, r: 0.25, color: isDark ? 'rgba(80,20,150,' : 'rgba(200,180,230,' },
+      { phase: 0.5, phasey: 0.8, r: 0.22, color: isDark ? 'rgba(30,50,180,' : 'rgba(180,200,240,' },
+      { phase: 0.6, phasey: 1.1, r: 0.18, color: isDark ? 'rgba(120,30,100,' : 'rgba(230,190,200,' },
+      { phase: 0.9, phasey: 0.6, r: 0.20, color: isDark ? 'rgba(50,50,160,' : 'rgba(190,220,220,' },
+    ];
+    for (var i = 0; i < blobs.length; i++) {
+      var b = blobs[i];
+      var cx = w * 0.5 + Math.cos(t * b.phase * 0.15 + i * 2) * w * 0.3;
+      var cy = h * 0.5 + Math.sin(t * b.phasey * 0.15 + i * 1.5) * h * 0.3;
+      var radius = Math.min(w, h) * b.r;
+      var grad = ctx2d.createRadialGradient(cx, cy, 0, cx, cy, radius);
+      grad.addColorStop(0, b.color + '0.25)');
+      grad.addColorStop(1, b.color + '0)');
+      ctx2d.fillStyle = grad;
+      ctx2d.fillRect(0, 0, w, h);
+    }
+    ctx2d.globalCompositeOperation = 'source-over';
+  }
+
+  function renderSpace2D(t, w, h, isDark) {
+    var grd = ctx2d.createLinearGradient(0, 0, 0, h);
+    if (isDark) {
+      grd.addColorStop(0, '#03020a');
+      grd.addColorStop(1, '#080414');
+    } else {
+      grd.addColorStop(0, '#e0e3f0');
+      grd.addColorStop(1, '#ebedf8');
+    }
+    ctx2d.fillStyle = grd;
+    ctx2d.fillRect(0, 0, w, h);
+
+    // Stars
+    var starAlpha = isDark ? 0.9 : 0.15;
+    ctx2d.fillStyle = 'rgba(255,255,255,' + starAlpha + ')';
+    // Deterministic star positions based on seed
+    for (var i = 0; i < 200; i++) {
+      var sx = (Math.sin(i * 127.1 + 311.7) * 43758.5453) % 1;
+      var sy = (Math.sin(i * 269.5 + 183.3) * 43758.5453) % 1;
+      if (sx < 0) sx += 1; if (sy < 0) sy += 1;
+      var twinkle = 0.4 + 0.6 * (Math.sin(t * (2 + sx * 4) + i) * 0.5 + 0.5);
+      ctx2d.globalAlpha = twinkle * starAlpha;
+      ctx2d.fillRect(sx * w, sy * h, 2, 2);
+    }
+    ctx2d.globalAlpha = 1;
+
+    // Nebula
+    var nebulaAlpha = isDark ? 0.12 : 0.05;
+    var nebulas = [
+      { x: 0.3, y: 0.6, r: 0.25, c: 'rgba(100,25,150,' },
+      { x: 0.75, y: 0.35, r: 0.22, c: 'rgba(25,75,150,' },
+      { x: 0.5, y: 0.8, r: 0.2, c: 'rgba(125,38,75,' },
+    ];
+    for (var i = 0; i < nebulas.length; i++) {
+      var n = nebulas[i];
+      var nr = Math.min(w, h) * n.r;
+      var ng = ctx2d.createRadialGradient(n.x * w, n.y * h, 0, n.x * w, n.y * h, nr);
+      ng.addColorStop(0, n.c + nebulaAlpha + ')');
+      ng.addColorStop(1, n.c + '0)');
+      ctx2d.fillStyle = ng;
+      ctx2d.fillRect(0, 0, w, h);
+    }
+  }
+
+  function renderOcean2D(t, w, h, isDark) {
+    var grd = ctx2d.createLinearGradient(0, 0, 0, h);
+    if (isDark) {
+      grd.addColorStop(0, '#021a30');
+      grd.addColorStop(1, '#051e2e');
+    } else {
+      grd.addColorStop(0, '#8cb3d9');
+      grd.addColorStop(1, '#b3e0e5');
+    }
+    ctx2d.fillStyle = grd;
+    ctx2d.fillRect(0, 0, w, h);
+
+    // Simple caustic-like overlay
+    var caustAlpha = isDark ? 0.06 : 0.04;
+    ctx2d.globalCompositeOperation = 'lighter';
+    ctx2d.fillStyle = isDark ? 'rgba(50,130,180,' + caustAlpha + ')' : 'rgba(130,200,230,' + caustAlpha + ')';
+    for (var i = 0; i < 8; i++) {
+      var cx = w * 0.5 + Math.sin(t * 0.3 + i * 1.2) * w * 0.4;
+      var cy = h * 0.5 + Math.cos(t * 0.25 + i * 0.9) * h * 0.3;
+      var cr = Math.min(w, h) * (0.15 + i * 0.03);
+      var cg = ctx2d.createRadialGradient(cx, cy, 0, cx, cy, cr);
+      cg.addColorStop(0, isDark ? 'rgba(50,130,180,0.08)' : 'rgba(130,200,230,0.06)');
+      cg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx2d.fillStyle = cg;
+      ctx2d.fillRect(0, 0, w, h);
+    }
+    ctx2d.globalCompositeOperation = 'source-over';
+
+    // Light rays
+    ctx2d.globalCompositeOperation = 'lighter';
+    var rayAlpha = isDark ? 0.04 : 0.03;
+    for (var i = 0; i < 5; i++) {
+      var rx = w * (0.15 + i * 0.18) + Math.sin(t * 0.2 + i * 1.5) * w * 0.04;
+      var rw = 8 + (h - 0) * 0.03;
+      var flicker = 0.7 + 0.3 * Math.sin(t * 0.5 + i * 2);
+      ctx2d.fillStyle = isDark ? 'rgba(40,90,140,' + (rayAlpha * flicker) + ')' : 'rgba(150,210,240,' + (rayAlpha * flicker) + ')';
+      ctx2d.beginPath();
+      ctx2d.moveTo(rx - 2, 0);
+      ctx2d.lineTo(rx + 2, 0);
+      ctx2d.lineTo(rx + rw, h);
+      ctx2d.lineTo(rx - rw, h);
+      ctx2d.closePath();
+      ctx2d.fill();
+    }
+    ctx2d.globalCompositeOperation = 'source-over';
+  }
+
+  // --- Animation loop ---
+  function bgLoop(timestamp) {
+    if (bgMode === 'none') {
+      bgAnimId = null;
+      return;
+    }
+    var elapsed = (timestamp - bgStartTime) / 1000.0;
+
+    if (useFallback) {
+      renderBg2D(elapsed);
+    } else {
+      renderBgGL(elapsed);
+    }
+    bgAnimId = requestAnimationFrame(bgLoop);
+  }
+
+  function startBg() {
+    bgCanvas.style.display = 'block';
+    bgStartTime = performance.now();
+    resizeBgCanvas();
+    if (!bgAnimId) {
+      bgAnimId = requestAnimationFrame(bgLoop);
+    }
+  }
+
+  function stopBg() {
+    if (bgAnimId) {
+      cancelAnimationFrame(bgAnimId);
+      bgAnimId = null;
+    }
+    if (gl) {
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+    } else if (ctx2d) {
+      ctx2d.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+    }
+    bgCanvas.style.display = 'none';
+  }
+
+  // --- Event listeners ---
+  bgSelect.addEventListener('change', function() {
+    bgMode = bgSelect.value;
+    localStorage.setItem('lava-orb-bg', bgMode);
+    if (bgMode === 'none') {
+      stopBg();
+    } else {
+      startBg();
+    }
+  });
+
+  window.addEventListener('resize', function() {
+    if (bgMode !== 'none') {
+      resizeBgCanvas();
+    }
+  });
+
+  // --- Init ---
+  initBgGL();
+  // Restore saved preference + миграция старых имён (abstract→embers, space→aurora, ocean→grid)
+  var savedBg = localStorage.getItem('lava-orb-bg');
+  var migration = { abstract: 'embers', space: 'aurora', ocean: 'grid' };
+  if (savedBg && migration[savedBg]) {
+    savedBg = migration[savedBg];
+    localStorage.setItem('lava-orb-bg', savedBg);
+  }
+  // Guard против невалидных значений
+  var validBgs = ['none', 'embers', 'aurora', 'grid'];
+  if (savedBg && validBgs.indexOf(savedBg) === -1) savedBg = 'none';
+
+  if (savedBg && savedBg !== 'none') {
+    bgMode = savedBg;
+    bgSelect.value = savedBg;
+    startBg();
+  } else {
+    bgCanvas.style.display = 'none';
+  }
+
+})();
+</script>
+</body>
+</html>

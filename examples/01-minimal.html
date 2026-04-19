@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>LavaOrb — Minimal Example</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, sans-serif;
+    background: #0d1117; color: #e6edf3;
+    min-height: 100vh; padding: 60px;
+  }
+  body[data-theme="dark"] { background: #0d1117; color: #e6edf3; }
+  h1 { font-size: 22px; margin-bottom: 8px; }
+  .hint { font-size: 13px; opacity: 0.6; margin-bottom: 32px; }
+
+  .slider-card {
+    max-width: 700px; margin: 0 auto 24px;
+    padding: 20px 24px; border-radius: 12px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .slider-card h2 { font-size: 14px; margin-bottom: 16px; opacity: 0.8; }
+
+  /* Slider wrapper — position:relative обязателен чтобы orbEl позиционировался по треку */
+  .lava-orb-wrapper {
+    position: relative;
+    padding: 24px 0;
+    /* overflow: visible критично — канвасы огня выходят за границы */
+  }
+
+  input[type=range] {
+    width: 100%; height: 12px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.08);
+    appearance: none; -webkit-appearance: none;
+    cursor: pointer;
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: transparent;
+    opacity: 0;
+    cursor: grab;
+  }
+  input[type=range]::-moz-range-thumb {
+    -moz-appearance: none;
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: transparent;
+    opacity: 0;
+    border: none;
+    cursor: grab;
+  }
+
+  .value-display {
+    display: inline-block; margin-left: 16px;
+    padding: 4px 12px; border-radius: 6px;
+    background: rgba(255,255,255,0.08);
+    font-family: monospace; font-size: 14px;
+  }
+</style>
+</head>
+<body data-theme="dark">
+
+<h1>LavaOrb v3b — Minimal Example</h1>
+<p class="hint">Public API <code>LavaOrb.attach(input, options)</code> в действии. Подвигай ползунок.</p>
+
+<div class="slider-card">
+  <h2>Satisfaction (1-10)</h2>
+  <input type="range" id="s1" min="1" max="10" value="5">
+  <span class="value-display" id="v1">5</span>
+</div>
+
+<div class="slider-card">
+  <h2>Temperature (1-10)</h2>
+  <input type="range" id="s2" min="1" max="10" value="3">
+  <span class="value-display" id="v2">3</span>
+</div>
+
+<div class="slider-card">
+  <h2>Intensity (1-10)</h2>
+  <input type="range" id="s3" min="1" max="10" value="10">
+  <span class="value-display" id="v3">10</span>
+</div>
+
+<!-- Работает через file:// — IIFE bundle, без ES modules -->
+<script src="../dist/lava-orb.js"></script>
+<script>
+  const inputs = [['s1', 'v1'], ['s2', 'v2'], ['s3', 'v3']];
+  inputs.forEach(([sId, vId]) => {
+    const input = document.getElementById(sId);
+    const valDisp = document.getElementById(vId);
+    LavaOrb.attach(input, {
+      size: 60,
+      onChange: (val) => { valDisp.textContent = val; }
+    });
+  });
+  console.log('LavaOrb version:', LavaOrb.VERSION);
+</script>
+
+</body>
+</html>

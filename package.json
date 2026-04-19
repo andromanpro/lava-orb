@@ -1,0 +1,67 @@
+{
+  "name": "lava-orb",
+  "version": "0.1.0",
+  "description": "Temperature-reactive liquid orb attached to HTML range inputs. Canvas2D, zero dependencies. Ice at min, fire at max, smooth gradient in between.",
+  "type": "module",
+  "main": "./dist/lava-orb.js",
+  "module": "./src/index.js",
+  "exports": {
+    ".": {
+      "import": "./src/index.js",
+      "default": "./dist/lava-orb.js"
+    },
+    "./dist/lava-orb.js": "./dist/lava-orb.js",
+    "./src/*": "./src/*"
+  },
+  "files": [
+    "dist/",
+    "src/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node build.cjs",
+    "test": "node tests/run-node.cjs || echo 'open tests/runner.html in browser for full suite'"
+  },
+  "keywords": [
+    "canvas",
+    "canvas2d",
+    "orb",
+    "fire",
+    "frost",
+    "ice",
+    "liquid",
+    "particles",
+    "range",
+    "slider",
+    "input",
+    "visual",
+    "effect",
+    "reactive",
+    "temperature",
+    "animation",
+    "interactive",
+    "survey",
+    "form",
+    "no-deps"
+  ],
+  "author": {
+    "name": "andromanpro",
+    "email": "andromanpro@gmail.com"
+  },
+  "license": "MIT",
+  "homepage": "http://192.168.1.130:3000/androman/lava-orb",
+  "repository": {
+    "type": "git",
+    "url": "http://192.168.1.130:3000/androman/lava-orb.git"
+  },
+  "bugs": {
+    "url": "http://192.168.1.130:3000/androman/lava-orb/issues"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "sideEffects": [
+    "./src/index.js"
+  ]
+}

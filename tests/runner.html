@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LavaOrb v3b — Test Runner</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, monospace; padding: 40px; background: #0d1117; color: #e6edf3; min-height: 100vh; }
+  h1 { margin-bottom: 16px; }
+  .summary { padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 15px; font-weight: bold; }
+  .summary.pass { background: rgba(50, 200, 100, 0.2); color: #5af08a; }
+  .summary.fail { background: rgba(240, 80, 80, 0.2); color: #ff8080; }
+  .test { padding: 8px 12px; margin: 4px 0; border-radius: 4px; font-size: 13px; font-family: monospace; }
+  .test.pass { background: rgba(50, 200, 100, 0.1); }
+  .test.fail { background: rgba(240, 80, 80, 0.15); }
+  .test.fail .err { color: #ff8080; font-size: 11px; margin-top: 4px; }
+  .group { margin-top: 16px; font-weight: bold; opacity: 0.7; }
+  /* Hidden slider for test orbs */
+  .test-slot { position: absolute; left: -9999px; top: -9999px; width: 400px; }
+</style>
+</head>
+<body>
+
+<h1>LavaOrb v3b Test Runner</h1>
+<div id="summary" class="summary">Running...</div>
+<div id="results"></div>
+
+<!-- Test DOM — hidden -->
+<div class="test-slot" id="test-dom">
+  <input type="range" id="test-slider" min="1" max="10" value="5">
+</div>
+
+<script type="module">
+  import LavaOrb from '../src/index.js';
+
+  const tests = [];
+  const results = document.getElementById('results');
+  const summary = document.getElementById('summary');
+
+  function test(group, name, fn) { tests.push({ group, name, fn }); }
+  function assert(cond, msg) { if (!cond) throw new Error(msg || 'assertion failed'); }
+  function assertEq(actual, expected, msg) {
+    if (actual !== expected) throw new Error(`${msg || 'mismatch'}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+  }
+
+  // === Group 1: Public API ===
+  test('API', 'LavaOrb.attach returns handle', () => {
+    const input = document.createElement('input');
+    input.type = 'range'; input.min = 1; input.max = 10; input.value = 5;
+    document.getElementById('test-dom').appendChild(input);
+    const h = LavaOrb.attach(input);
+    assert(typeof h === 'object', 'handle object');
+    assert(typeof h.destroy === 'function', 'destroy method');
+    assert(typeof h.setVal === 'function', 'setVal method');
+    assert(typeof h.explode === 'function', 'explode method');
+    h.destroy();
+  });
+
+  test('API', 'attach throws on non-range input', () => {
+    const div = document.createElement('div');
+    let threw = false;
+    try { LavaOrb.attach(div); } catch (e) { threw = true; }
+    assert(threw, 'should throw on non-input');
+  });
+
+  test('API', 'destroy removes canvases', () => {
+    const input = document.createElement('input');
+    input.type = 'range'; input.min = 1; input.max = 10;
+    document.getElementById('test-dom').appendChild(input);
+    const before = document.querySelectorAll('canvas').length;
+    const h = LavaOrb.attach(input);
+    const during = document.querySelectorAll('canvas').length;
+    assertEq(during, before + 2, 'should add 2 canvases (orb + fire)');
+    h.destroy();
+    const after = document.querySelectorAll('canvas').length;
+    assertEq(after, before, 'should remove all added canvases');
+  });
+
+  test('API', 'isAlive returns true/false correctly', () => {
+    const input = document.createElement('input');
+    input.type = 'range'; input.min = 1; input.max = 10;
+    document.getElementById('test-dom').appendChild(input);
+    const h = LavaOrb.attach(input);
+    assertEq(h.isAlive(), true);
+    h.destroy();
+    assertEq(h.isAlive(), false);
+  });
+
+  test('API', 'getByInput retrieves handle', () => {
+    const input = document.createElement('input');
+    input.type = 'range'; input.min = 1; input.max = 10;
+    document.getElementById('test-dom').appendChild(input);
+    const h = LavaOrb.attach(input);
+    const retrieved = LavaOrb.getByInput(input);
+    assert(retrieved === h, 'same handle returned');
+    h.destroy();
+    assert(LavaOrb.getByInput(input) === null, 'null after destroy');
+  });
+
+  // === Group 2: Palettes & temp params ===
+  test('Palettes', 'getPalette returns 4 colors for all vals', () => {
+    for (let v = 1; v <= 10; v++) {
+      const pal = LavaOrb.getPalette(v, true);
+      assertEq(pal.length, 4, `val ${v} should have 4 colors`);
+      pal.forEach((c, i) => assert(/^#[0-9A-Fa-f]{6}$/.test(c), `val ${v} color ${i} invalid: ${c}`));
+    }
+  });
+
+  test('Palettes', 'tempParams monotonic temperature', () => {
+    const p1 = LavaOrb.tempParams(1);
+    const p10 = LavaOrb.tempParams(10);
+    assertEq(p1.frost, true);
+    assertEq(p10.fire, true);
+    assert(p1.fill < p10.fill, 'fill increases with val');
+    assert(p1.speed < p10.speed, 'speed increases with val');
+  });
+
+  test('Palettes', 'tempParams clamps to 1-10', () => {
+    assertEq(LavaOrb.tempParams(0.5).frost, true);
+    assertEq(LavaOrb.tempParams(11).fire, true);
+  });
+
+  // === Group 3: Physics ===
+  test('Physics', 'setVal clamps to 1-10', () => {
+    const input = document.createElement('input');
+    input.type = 'range'; input.min = 1; input.max = 10;
+    document.getElementById('test-dom').appendChild(input);
+    const h = LavaOrb.attach(input);
+    h.setVal(15); assertEq(h.orb.val, 10);
+    h.setVal(-5); assertEq(h.orb.val, 1);
+    h.setVal(7); assertEq(h.orb.val, 7);
+    h.destroy();
+  });
+
+  test('Physics', 'applyForce adds velocity', () => {
+    const input = document.createElement('input');
+    input.type = 'range'; input.min = 1; input.max = 10;
+    document.getElementById('test-dom').appendChild(input);
+    const h = LavaOrb.attach(input);
+    h.orb.velocity = 0;
+    h.orb.applyForce(10);
+    assert(h.orb.velocity > 0, 'velocity positive after push');
+    h.destroy();
+  });
+
+  test('Physics', 'update/draw without throwing', () => {
+    const input = document.createElement('input');
+    input.type = 'range'; input.min = 1; input.max = 10;
+    document.getElementById('test-dom').appendChild(input);
+    const h = LavaOrb.attach(input);
+    for (let i = 0; i < 30; i++) {
+      h.orb.update(1.0);
+      h.orb.draw(1.0);
+    }
+    h.destroy();
+  });
+
+  // === Group 4: Effects (mixins) ===
+  test('Effects', 'fire-doom installed', () => {
+    const input = document.createElement('input');
+    input.type = 'range'; input.min = 1; input.max = 10;
+    document.getElementById('test-dom').appendChild(input);
+    const h = LavaOrb.attach(input);
+    assertEq(typeof h.orb.updateDoomFireBuffer, 'function');
+    assertEq(typeof h.orb.renderDoomFire, 'function');
+    h.destroy();
+  });
+
+  test('Effects', 'fire-particles installed', () => {
+    const input = document.createElement('input');
+    input.type = 'range'; input.min = 1; input.max = 10;
+    document.getElementById('test-dom').appendChild(input);
+    const h = LavaOrb.attach(input);
+    assertEq(typeof h.orb.spawnFireParticles, 'function');
+    assertEq(typeof h.orb.drawFireEffect, 'function');
+    h.destroy();
+  });
+
+  test('Effects', 'frost installed', () => {
+    const input = document.createElement('input');
+    input.type = 'range'; input.min = 1; input.max = 10;
+    document.getElementById('test-dom').appendChild(input);
+    const h = LavaOrb.attach(input);
+    assertEq(typeof h.orb.drawFrostEffect, 'function');
+    h.destroy();
+  });
+
+  test('Effects', 'spawnFireParticles fills pool at val 10', () => {
+    const input = document.createElement('input');
+    input.type = 'range'; input.min = 1; input.max = 10; input.value = 10;
+    document.getElementById('test-dom').appendChild(input);
+    const h = LavaOrb.attach(input);
+    h.setVal(10);
+    for (let i = 0; i < 10; i++) { h.orb.update(1.0); h.orb.draw(1.0); }
+    const active = h.orb.fireParticles.filter(p => p.active).length;
+    assert(active > 0, `expected >0 fire particles at val 10, got ${active}`);
+    h.destroy();
+  });
+
+  test('Effects', 'explode populates explosion array', () => {
+    const input = document.createElement('input');
+    input.type = 'range'; input.min = 1; input.max = 10;
+    document.getElementById('test-dom').appendChild(input);
+    const h = LavaOrb.attach(input);
+    h.explode();
+    assert(h.orb.explosion.length > 0, 'explosion array populated');
+    h.destroy();
+  });
+
+  // === Group 5: Groups ===
+  test('Groups', 'createGroup returns OrbGroup', () => {
+    const g = LavaOrb.createGroup({ name: 'test' });
+    assertEq(g.name, 'test');
+    assertEq(g.size, 0);
+    g.destroy();
+  });
+
+  test('Groups', 'attach registers in group', () => {
+    const input = document.createElement('input');
+    input.type = 'range'; input.min = 1; input.max = 10;
+    document.getElementById('test-dom').appendChild(input);
+    const g = LavaOrb.createGroup();
+    const h = g.attach ? g.attach(input) : LavaOrb.attach(input, { group: g });
+    assertEq(g.size, 1);
+    h.destroy();
+    assertEq(g.size, 0);
+    g.destroy();
+  });
+
+  test('Groups', 'group.on emits events', () => {
+    const g = LavaOrb.createGroup();
+    let called = false;
+    g.on('test', () => { called = true; });
+    g.emit('test');
+    assert(called);
+    g.destroy();
+  });
+
+  // === Run ===
+  let passed = 0, failed = 0;
+  let currentGroup = null;
+  tests.forEach(({ group, name, fn }) => {
+    if (group !== currentGroup) {
+      const h = document.createElement('div');
+      h.className = 'group';
+      h.textContent = group;
+      results.appendChild(h);
+      currentGroup = group;
+    }
+    const div = document.createElement('div');
+    div.className = 'test';
+    try {
+      fn();
+      div.classList.add('pass');
+      div.textContent = '✓ ' + name;
+      passed++;
+    } catch (e) {
+      div.classList.add('fail');
+      div.innerHTML = '✗ ' + name + '<div class="err">' + e.message + '</div>';
+      failed++;
+    }
+    results.appendChild(div);
+  });
+
+  summary.classList.add(failed === 0 ? 'pass' : 'fail');
+  summary.textContent = `${passed}/${tests.length} passed` + (failed ? ` (${failed} failed)` : ' — all good');
+
+  // Expose results for automation
+  window.__testResults = { passed, failed, total: tests.length };
+</script>
+</body>
+</html>
