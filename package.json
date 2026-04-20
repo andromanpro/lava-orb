@@ -1,6 +1,6 @@
 {
   "name": "@andromanpro/lava-orb",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Temperature-reactive liquid orb attached to HTML range inputs. Canvas2D, zero dependencies. Ice at min, fire at max, smooth gradient in between.",
   "type": "module",
   "main": "./dist/lava-orb.js",

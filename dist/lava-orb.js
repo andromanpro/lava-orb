@@ -2,7 +2,7 @@
  * lava-orb — temperature-reactive liquid capsule effect for range sliders
  * Version: 3.0.0-alpha.1
  * License: MIT
- * Built: 2026-04-20T19:58:58.529Z
+ * Built: 2026-04-20T20:06:33.478Z
  */
 (function(window) {
 "use strict";
@@ -2815,7 +2815,7 @@ const LavaOrbAPI = {
   getPalette,
   getBadgeColor,
   tempParams,
-  VERSION: '0.1.0'
+  VERSION: '0.1.1'
 };
 
 // In browser — attach to window for IIFE compatibility
