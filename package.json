@@ -50,13 +50,13 @@
     "email": "andromanpro@gmail.com"
   },
   "license": "MIT",
-  "homepage": "http://192.168.1.130:3000/androman/lava-orb",
+  "homepage": "https://andromanpro.github.io/lava-orb/",
   "repository": {
     "type": "git",
-    "url": "http://192.168.1.130:3000/androman/lava-orb.git"
+    "url": "git+https://github.com/andromanpro/lava-orb.git"
   },
   "bugs": {
-    "url": "http://192.168.1.130:3000/androman/lava-orb/issues"
+    "url": "https://github.com/andromanpro/lava-orb/issues"
   },
   "engines": {
     "node": ">=14"
