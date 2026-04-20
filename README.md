@@ -41,11 +41,11 @@ Canvas 2D · zero dependencies · MIT
 ### npm
 
 ```bash
-npm install lava-orb
+npm install @andromanpro/lava-orb
 ```
 
 ```js
-import { attach } from 'lava-orb';
+import { attach } from '@andromanpro/lava-orb';
 
 const slider = document.querySelector('input[type=range]');
 const handle = attach(slider, { size: 60 });
@@ -54,7 +54,7 @@ const handle = attach(slider, { size: 60 });
 ### CDN / `<script>`
 
 ```html
-<script src="https://unpkg.com/lava-orb/dist/lava-orb.js"></script>
+<script src="https://unpkg.com/@andromanpro/lava-orb/dist/lava-orb.js"></script>
 <script>
   const handle = LavaOrb.attach(document.getElementById('mySlider'));
 </script>
@@ -71,7 +71,7 @@ const handle = attach(slider, { size: 60 });
 ```html
 <input type="range" id="q1" min="1" max="10" value="5" />
 
-<script src="https://unpkg.com/lava-orb/dist/lava-orb.js"></script>
+<script src="https://unpkg.com/@andromanpro/lava-orb/dist/lava-orb.js"></script>
 <script>
   LavaOrb.attach(document.getElementById('q1'), {
     size: 60,        // диаметр орба в пикселях
@@ -201,18 +201,18 @@ src/
 ### Install
 
 ```bash
-npm install lava-orb
+npm install @andromanpro/lava-orb
 ```
 
 ```js
-import { attach } from 'lava-orb';
+import { attach } from '@andromanpro/lava-orb';
 attach(document.querySelector('input[type=range]'), { size: 60 });
 ```
 
 ### Or via CDN
 
 ```html
-<script src="https://unpkg.com/lava-orb/dist/lava-orb.js"></script>
+<script src="https://unpkg.com/@andromanpro/lava-orb/dist/lava-orb.js"></script>
 <script>LavaOrb.attach(document.getElementById('slider'));</script>
 ```
 
