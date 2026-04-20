@@ -2,7 +2,7 @@
  * lava-orb — temperature-reactive liquid capsule effect for range sliders
  * Version: 3.0.0-alpha.1
  * License: MIT
- * Built: 2026-04-19T15:38:57.376Z
+ * Built: 2026-04-20T19:58:58.529Z
  */
 (function(window) {
 "use strict";
@@ -2036,7 +2036,12 @@ function installDetach(LavaOrb, OrbGroup) {
 // ==================== DRAG LISTENERS ====================
 
 function _installDragListeners(group) {
-  const container = group.container || document;
+  // Listen on `document`, not `group.container`: the floater is fixed-positioned
+  // and can overlap HTML area outside <body> (e.g. when the page is shorter than
+  // viewport). In that case mousedown target is <html>, event never bubbles to
+  // <body> — a listener on body would miss it and the orb becomes "ungrabbable"
+  // until it falls below viewport bottom.
+  const container = document;
   let dragState = null;
   const history = [];
 
