@@ -148,6 +148,101 @@ LavaOrb.attach(input2, { group: groupA });
 
 ---
 
+## Интеграция: подводные камни
+
+> Если орб не появляется или off-position — почти всегда одна из этих причин.
+
+### 1. CSS требования к input
+
+Library читает thumb's `getBoundingClientRect()` для расчёта позиции орба. Минимальный набор стилей:
+
+```css
+input[type="range"] {
+  height: 12px;
+  background: linear-gradient(to right, #3b82f6, #06b6d4 25%, #fbbf24 60%, #ef4444);
+  border-radius: 6px;
+  appearance: none; -webkit-appearance: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 60px; height: 60px;       /* критично — library читает эти размеры */
+  background: transparent;
+  opacity: 0;                       /* физически 60×60, визуально невидим */
+  cursor: grab;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 60px; height: 60px;
+  background: transparent; border: 0;
+  opacity: 0; cursor: grab;
+}
+```
+
+**Не работает:** `::-webkit-slider-runnable-track` для styling — library ждёт background на самом input, не на pseudo-track.
+
+### 2. Layout: input в block-контексте
+
+Input должен быть в block-контексте. `display: flex` с siblings рядом ломает позиционирование орба — library рассчитывает rect по input, но flex может смещать его относительно ожидаемой точки. Также `display: block; margin: 0 auto` на input может ломать кэшированный rect.
+
+❌ **Не работает** (orb уезжает off-position):
+
+```html
+<div style="display: flex; align-items: center; gap: 24px;">
+  <input type="range" ...>
+  <span>5</span>
+</div>
+```
+
+✅ **Работает** (как в `examples/01-minimal.html`):
+
+```html
+<div style="max-width: 480px; margin: 0 auto; padding: 0 40px;">
+  <input type="range" ... style="width: 100%;">
+  <div style="text-align: center;">значение: <span>5</span></div>
+</div>
+```
+
+### 3. Collision-explosion: `group` — это объект, не строка
+
+Через общий `OrbGroup`, созданный фабрикой `LavaOrb.createGroup({ name })`:
+
+```js
+// строка — orbs init silently fails или не collide
+LavaOrb.attach(input1, { group: 'demo' });
+
+// объект через createGroup — правильно
+const group = LavaOrb.createGroup({ name: 'demo' });
+LavaOrb.attach(input1, { group, detach: true, onChange: v => ... });
+LavaOrb.attach(input2, { group, detach: true, onChange: v => ... });
+// Теперь при сведении орбов друг с другом срабатывает взрыв
+```
+
+### 4. Динамический label вокруг орба
+
+`onChange` стреляет на каждое изменение value. Удобно для синхронизации текста и цвета вокруг орба:
+
+```js
+function temp(v) {
+  const n = +v;
+  if (n <= 1)  return { label: 'мороз',       color: '#3b82f6' };
+  if (n <= 3)  return { label: 'холодный',    color: '#06b6d4' };
+  if (n <= 5)  return { label: 'прохладный',  color: '#84cc16' };
+  if (n <= 7)  return { label: 'тёплый',      color: '#fbbf24' };
+  if (n <= 9)  return { label: 'горячий',     color: '#f97316' };
+  return        { label: 'огонь',          color: '#ef4444' };
+}
+
+LavaOrb.attach(input, {
+  onChange: v => {
+    const t = temp(v);
+    labelEl.textContent = t.label;
+    labelEl.style.color = t.color;
+    valEl.textContent = v;
+  }
+});
+```
+
+---
+
 ## Разработка
 
 ```bash
