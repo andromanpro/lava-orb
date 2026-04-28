@@ -2,7 +2,7 @@
  * lava-orb — temperature-reactive liquid capsule effect for range sliders
  * Version: 3.0.0-alpha.1
  * License: MIT
- * Built: 2026-04-20T20:06:33.478Z
+ * Built: 2026-04-28T10:34:37.435Z
  */
 (function(window) {
 "use strict";
