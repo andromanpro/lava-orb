@@ -324,3 +324,7 @@ attach(document.querySelector('input[type=range]'), { size: 60 });
 - ~106 KB IIFE bundle, zero dependencies
 
 Full API reference and examples — see Russian section above or the [`examples/`](examples/) folder.
+
+---
+
+🌐 [androman.pro](https://androman.pro) · ✈ [Telegram](https://t.me/andromanpro1c)
